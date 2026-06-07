@@ -1,4 +1,7 @@
-name: Node.js CIname  push:
+name: Node.js CI
+
+on:
+  push:
     branches:
       - main
   pull_request:
@@ -52,7 +55,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y postgresql-client
 
-      - name: Verificar conexión con PostgreSQL
+      - name: Verificar conexion con PostgreSQL
         run: |
           PGPASSWORD=12345 pg_isready -h localhost -p 5432 -U postgres -d conectalocal_db
 
@@ -62,10 +65,8 @@ jobs:
             echo "Importando conectalocal_db_backup.sql con psql..."
             PGPASSWORD=12345 psql -h localhost -U postgres -d conectalocal_db -f conectalocal_db_backup.sql
           else
-            echo "No existe conectalocal_db_backup.sql, se omite importación."
+            echo "No existe conectalocal_db_backup.sql, se omite importacion."
           fi
 
       - name: Ejecutar tests con coverage
         run: npm test -- --coverage
-
-on:
