@@ -1,10 +1,9 @@
-name: Node.js CI
-
-on:
-  push:
-    branches: [main]
+name: Node.js CIname  push:
+    branches:
+      - main
   pull_request:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
@@ -57,7 +56,7 @@ jobs:
         run: |
           PGPASSWORD=12345 pg_isready -h localhost -p 5432 -U postgres -d conectalocal_db
 
-     - name: Importar base de datos
+      - name: Importar base de datos
         run: |
           if [ -f "conectalocal_db_backup.sql" ]; then
             echo "Importando conectalocal_db_backup.sql con psql..."
@@ -65,6 +64,8 @@ jobs:
           else
             echo "No existe conectalocal_db_backup.sql, se omite importación."
           fi
-          
+
       - name: Ejecutar tests con coverage
         run: npm test -- --coverage
+
+on:
