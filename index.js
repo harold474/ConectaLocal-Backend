@@ -47,55 +47,116 @@ app.get('/test-db', async (req, res) => {
 // ==========================================
 app.post('/api/registro', async (req, res) => {
     try {
-        const { nombre, email, password, rol, nombre_negocio, direccion, barrio } = req.body;
+        const {
+            nombre,
+            email,
+            correo,
+            password,
+            rol,
+            nombre_negocio,
+            direccion,
+            barrio
+        } = req.body;
+
+        const emailFinal = email || correo;
+        const rolFinal = rol || 'consumidor';
+        const nombreNegocioFinal = nombre_negocio || null;
+        const direccionFinal = direccion || null;
+        const barrioFinal = barrio || null;
+
+        if (!nombre || !emailFinal || !password) {
+            return res.status(400).json({
+                error: 'Nombre, email y password son obligatorios'
+            });
+        }
 
         // 1. Verificamos si el correo ya existe
-        const usuarioExistente = await pool.query("SELECT * FROM usuarios WHERE email = $1", [email]);
+        const usuarioExistente = await pool.query(
+            "SELECT * FROM usuarios WHERE email = $1",
+            [emailFinal]
+        );
 
         if (usuarioExistente.rows.length > 0) {
             const estadoActual = usuarioExistente.rows[0].estado || 'activo';
 
             // Si está bloqueado permanentemente
             if (estadoActual === 'bloqueado') {
-                return res.status(403).json({ 
-                    error: "El correo o documento fue bloqueado. Para desbloquear contacte con el administrador." 
+                return res.status(403).json({
+                    error: "El correo o documento fue bloqueado. Para desbloquear contacte con el administrador."
                 });
             }
 
-            // Si está inactivo, le permitimos "registrarse" reactivando su cuenta
+            // Si está inactivo, le permitimos reactivarse
             if (estadoActual === 'inactivo') {
                 const salt = await bcrypt.genSalt(10);
                 const bcryptPassword = await bcrypt.hash(password, salt);
-                
+
                 const usuarioReactivado = await pool.query(
                     `UPDATE usuarios 
-                     SET estado = 'activo', nombre = $1, password = $2, rol = $3, nombre_negocio = $4, direccion = $5, barrio = $6 
-                     WHERE email = $7 RETURNING *`,
-                    [nombre, bcryptPassword, rol, nombre_negocio, direccion, barrio, email]
+                     SET estado = 'activo',
+                         nombre = $1,
+                         password = $2,
+                         rol = $3,
+                         nombre_negocio = $4,
+                         direccion = $5,
+                         barrio = $6 
+                     WHERE email = $7
+                     RETURNING *`,
+                    [
+                        nombre,
+                        bcryptPassword,
+                        rolFinal,
+                        nombreNegocioFinal,
+                        direccionFinal,
+                        barrioFinal,
+                        emailFinal
+                    ]
                 );
-                return res.json({ 
-                    mensaje: "Cuenta reactivada exitosamente. Bienvenido de nuevo.", 
-                    usuario: usuarioReactivado.rows[0] 
+
+                return res.json({
+                    mensaje: "Cuenta reactivada exitosamente. Bienvenido de nuevo.",
+                    usuario: usuarioReactivado.rows[0]
                 });
             }
 
             // Si está activo y trata de registrarse de nuevo
-            return res.status(400).json({ error: "El usuario ya está registrado y activo." });
+            return res.status(400).json({
+                error: "El usuario ya está registrado y activo."
+            });
         }
 
         // 2. Si no existe, lo creamos normalmente
         const salt = await bcrypt.genSalt(10);
         const bcryptPassword = await bcrypt.hash(password, salt);
+
         const nuevoUsuario = await pool.query(
-            "INSERT INTO usuarios (nombre, email, password, rol, nombre_negocio, direccion, barrio, estado) VALUES ($1, $2, $3, $4, $5, $6, $7, 'activo') RETURNING *",
-            [nombre, email, bcryptPassword, rol, nombre_negocio, direccion, barrio]
+            `INSERT INTO usuarios 
+                (nombre, email, password, rol, nombre_negocio, direccion, barrio, estado)
+             VALUES 
+                ($1, $2, $3, $4, $5, $6, $7, 'activo')
+             RETURNING *`,
+            [
+                nombre,
+                emailFinal,
+                bcryptPassword,
+                rolFinal,
+                nombreNegocioFinal,
+                direccionFinal,
+                barrioFinal
+            ]
         );
-        res.json({ mensaje: "Usuario creado", usuario: nuevoUsuario.rows[0] });
+
+        return res.json({
+            mensaje: "Usuario creado",
+            usuario: nuevoUsuario.rows[0]
+        });
+
     } catch (err) {
-        console.error(err);
-        res.status(500).send("Error al registrar");
+        console.error('Error al registrar:', err);
+        return res.status(500).send('Error al registrar');
     }
 });
+
 
 // ==========================================
 // 3. LOGIN (MODIFICADO PARA BLOQUEAR INACTIVOS/BLOQUEADOS)

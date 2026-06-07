@@ -1,24 +1,27 @@
 const request = require('supertest');
 const app = require('../index');
-const pool = require('../db');
 
-afterAll(async () => {
-    await pool.end();
-});
+describe('Pruebas de autenticación', () => {
+    test('POST /api/registro debe crear usuario exitosamente', async () => {
+        const emailUnico = `test_${Date.now()}_${Math.floor(Math.random() * 10000)}@correo.com`;
 
-test('POST /api/registro debe crear usuario exitosamente', async () => {
-    const res = await request(app)
-        .post('/api/registro')
-        .send({
-            nombre: 'Harold Test',
-            email: 'test' + Date.now() + '@test.com',
-            password: '123',
-            rol: 'consumidor',
-            nombre_negocio: null,
-            direccion: 'Calle Falsa 123',
-            barrio: 'Centro'
-        });
+        const res = await request(app)
+            .post('/api/registro')
+            .send({
+                nombre: 'Usuario Test',
+                email: emailUnico,
+                password: '123456',
+                rol: 'consumidor',
+                nombre_negocio: 'Negocio Test',
+                direccion: 'Dirección Test',
+                barrio: 'Barrio Test'
+            });
 
-    expect(res.statusCode).toBe(200);
-    expect(res.body).toHaveProperty('mensaje');
+        if (res.statusCode !== 200) {
+            console.log('Error en registro:', res.text || res.body);
+        }
+
+        expect(res.statusCode).toBe(200);
+        expect(res.body).toHaveProperty('mensaje');
+    });
 });

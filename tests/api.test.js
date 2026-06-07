@@ -1,10 +1,5 @@
 const request = require('supertest');
 const app = require('../index');
-const pool = require('../db');
-
-afterAll(async () => {
-    await pool.end();
-});
 
 test('GET /api/productos debe devolver 200 OK', async () => {
     const res = await request(app).get('/api/productos');
