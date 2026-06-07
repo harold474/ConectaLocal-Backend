@@ -16,6 +16,18 @@ const app = express();
 // Middlewares
 app.use(cors());
 app.use(express.json());
+app.get('/', (req, res) => {
+    res.json({
+        mensaje: 'API de ConectaLocal funcionando correctamente',
+        estado: 'online',
+        rutas: {
+            pruebaBaseDatos: '/test-db',
+            productos: '/api/productos',
+            registro: '/api/registro',
+            login: '/api/login'
+        }
+    });
+});
 
 // ==========================================
 // CONFIGURACIÓN DE IMÁGENES (MULTER)
