@@ -13,7 +13,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:16
+        image: postgres:18
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: 12345
@@ -58,16 +58,20 @@ jobs:
           PGPASSWORD=12345 pg_isready -h localhost -p 5432 -U postgres -d conectalocal_db
 
       - name: Importar base de datos
-  run: |
-    if [ -f "conectalocal_db_backup.sql" ]; then
-      echo "Restaurando backup custom-format con pg_restore..."
-      PGPASSWORD=12345 pg_restore \
-        -h localhost \
-        -U postgres \
-        -d conectalocal_db \
-        --no-owner \
-        --no-privileges \
-        conectalocal_db_backup.sql
-    else
-      echo "No existe conectalocal_db_backup.sql, se omite importación."
-    fi
+        run: |
+          if [ -f "conectalocal_db_backup.sql" ]; then
+            echo "Restaurando backup custom-format con pg_restore..."
+            PGPASSWORD=12345 pg_restore \
+              -h localhost \
+              -U postgres \
+              -d conectalocal_db \
+              --no-owner \
+              --no-privileges \
+              conectalocal_db_backup.sql
+          else
+            echo "No existe conectalocal_db_backup.sql, se omite importación."
+          fi
+
+      - name: Ejecutar tests con coverage
+        run: npm test -- --coverage
+``
