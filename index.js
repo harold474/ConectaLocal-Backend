@@ -4,7 +4,10 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const path = require('path');
+const swaggerJsdoc = require('swagger-jsdoc');
+const swaggerUi = require('swagger-ui-express');
 require('dotenv').config({ quiet: true });
+
 const pool = require('./db');
 const { calcularTotal } = require('./logic');
 
@@ -13,13 +16,416 @@ const validarToken = require('./middleware/validarToken');
 
 const app = express();
 
+// ==========================================
+// CONFIGURACIÓN DE SWAGGER
+// ==========================================
+const swaggerOptions = {
+    definition: {
+        openapi: '3.0.0',
+        info: {
+            title: 'ConectaLocal API',
+            version: '1.0.0',
+            description: 'Documentación técnica de la API REST del sistema ConectaLocal'
+        },
+        servers: [
+            {
+                url: 'https://conectalocal-backend.onrender.com',
+                description: 'Servidor de producción en Render'
+            },
+            {
+                url: 'http://localhost:3000',
+                description: 'Servidor local de desarrollo'
+            }
+        ],
+        paths: {
+            '/': {
+                get: {
+                    summary: 'Estado general de la API',
+                    description: 'Retorna un mensaje indicando que la API de ConectaLocal está funcionando correctamente.',
+                    responses: {
+                        200: {
+                            description: 'API funcionando correctamente.'
+                        }
+                    }
+                }
+            },
+            '/test-db': {
+                get: {
+                    summary: 'Probar conexión con la base de datos',
+                    description: 'Verifica que el backend pueda conectarse correctamente con PostgreSQL.',
+                    responses: {
+                        200: {
+                            description: 'Conexión exitosa con la base de datos.'
+                        },
+                        500: {
+                            description: 'Error de conexión con la base de datos.'
+                        }
+                    }
+                }
+            },
+            '/api/registro': {
+                post: {
+                    summary: 'Registrar usuario',
+                    description: 'Crea un nuevo usuario en el sistema o reactiva una cuenta inactiva.',
+                    requestBody: {
+                        required: true,
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        nombre: {
+                                            type: 'string',
+                                            example: 'Usuario Test'
+                                        },
+                                        email: {
+                                            type: 'string',
+                                            example: 'usuario@correo.com'
+                                        },
+                                        password: {
+                                            type: 'string',
+                                            example: '123456'
+                                        },
+                                        rol: {
+                                            type: 'string',
+                                            example: 'consumidor'
+                                        },
+                                        nombre_negocio: {
+                                            type: 'string',
+                                            example: 'Negocio Local'
+                                        },
+                                        direccion: {
+                                            type: 'string',
+                                            example: 'Calle 123'
+                                        },
+                                        barrio: {
+                                            type: 'string',
+                                            example: 'Centro'
+                                        }
+                                    },
+                                    required: ['nombre', 'email', 'password']
+                                }
+                            }
+                        }
+                    },
+                    responses: {
+                        200: {
+                            description: 'Usuario creado o reactivado correctamente.'
+                        },
+                        400: {
+                            description: 'Usuario ya registrado o datos inválidos.'
+                        },
+                        403: {
+                            description: 'Usuario bloqueado.'
+                        },
+                        500: {
+                            description: 'Error interno al registrar.'
+                        }
+                    }
+                }
+            },
+            '/api/login': {
+                post: {
+                    summary: 'Iniciar sesión',
+                    description: 'Autentica un usuario y retorna un token JWT.',
+                    requestBody: {
+                        required: true,
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        email: {
+                                            type: 'string',
+                                            example: 'usuario@correo.com'
+                                        },
+                                        password: {
+                                            type: 'string',
+                                            example: '123456'
+                                        }
+                                    },
+                                    required: ['email', 'password']
+                                }
+                            }
+                        }
+                    },
+                    responses: {
+                        200: {
+                            description: 'Login exitoso.'
+                        },
+                        401: {
+                            description: 'Credenciales incorrectas.'
+                        },
+                        403: {
+                            description: 'Usuario inactivo o bloqueado.'
+                        },
+                        500: {
+                            description: 'Error en login.'
+                        }
+                    }
+                }
+            },
+            '/api/productos': {
+                get: {
+                    summary: 'Listar productos',
+                    description: 'Obtiene los productos disponibles con stock mayor a cero.',
+                    responses: {
+                        200: {
+                            description: 'Lista de productos obtenida correctamente.'
+                        },
+                        500: {
+                            description: 'Error al obtener productos.'
+                        }
+                    }
+                },
+                post: {
+                    summary: 'Publicar producto',
+                    description: 'Permite a un usuario productor crear una publicación de producto con imágenes y stock.',
+                    security: [
+                        {
+                            bearerAuth: []
+                        }
+                    ],
+                    requestBody: {
+                        required: true,
+                        content: {
+                            'multipart/form-data': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        nombre: {
+                                            type: 'string',
+                                            example: 'Tomate orgánico'
+                                        },
+                                        descripcion: {
+                                            type: 'string',
+                                            example: 'Producto fresco de cultivo local'
+                                        },
+                                        precio: {
+                                            type: 'number',
+                                            example: 5000
+                                        },
+                                        categoria: {
+                                            type: 'string',
+                                            example: 'Verduras'
+                                        },
+                                        stock: {
+                                            type: 'number',
+                                            example: 20
+                                        },
+                                        imagenes: {
+                                            type: 'array',
+                                            items: {
+                                                type: 'string',
+                                                format: 'binary'
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    responses: {
+                        200: {
+                            description: 'Producto creado correctamente.'
+                        },
+                        403: {
+                            description: 'No autorizado.'
+                        },
+                        500: {
+                            description: 'Error al crear producto.'
+                        }
+                    }
+                }
+            },
+            '/api/mis-productos': {
+                get: {
+                    summary: 'Listar productos del productor',
+                    description: 'Obtiene los productos publicados por el productor autenticado.',
+                    security: [
+                        {
+                            bearerAuth: []
+                        }
+                    ],
+                    responses: {
+                        200: {
+                            description: 'Lista de productos del productor.'
+                        },
+                        403: {
+                            description: 'No autorizado.'
+                        },
+                        500: {
+                            description: 'Error al obtener inventario.'
+                        }
+                    }
+                }
+            },
+            '/api/pedidos': {
+                post: {
+                    summary: 'Crear pedido',
+                    description: 'Permite a un consumidor crear un pedido con productos del carrito.',
+                    security: [
+                        {
+                            bearerAuth: []
+                        }
+                    ],
+                    requestBody: {
+                        required: true,
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        total: {
+                                            type: 'number',
+                                            example: 25000
+                                        },
+                                        carrito: {
+                                            type: 'array',
+                                            items: {
+                                                type: 'object'
+                                            }
+                                        },
+                                        tipo_entrega: {
+                                            type: 'string',
+                                            example: 'domicilio'
+                                        },
+                                        direccion: {
+                                            type: 'string',
+                                            example: 'Calle 123'
+                                        },
+                                        barrio: {
+                                            type: 'string',
+                                            example: 'Centro'
+                                        },
+                                        telefono: {
+                                            type: 'string',
+                                            example: '3001234567'
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    responses: {
+                        200: {
+                            description: 'Pedido creado correctamente.'
+                        },
+                        400: {
+                            description: 'Error en la creación del pedido.'
+                        },
+                        403: {
+                            description: 'Solo consumidores.'
+                        }
+                    }
+                }
+            },
+            '/api/mis-pedidos': {
+                get: {
+                    summary: 'Historial de pedidos del consumidor',
+                    description: 'Obtiene el historial de pedidos realizados por el consumidor autenticado.',
+                    security: [
+                        {
+                            bearerAuth: []
+                        }
+                    ],
+                    responses: {
+                        200: {
+                            description: 'Historial obtenido correctamente.'
+                        },
+                        500: {
+                            description: 'Error al obtener historial.'
+                        }
+                    }
+                }
+            },
+            '/api/perfil': {
+                get: {
+                    summary: 'Obtener perfil de usuario',
+                    description: 'Obtiene la información del perfil del usuario autenticado.',
+                    security: [
+                        {
+                            bearerAuth: []
+                        }
+                    ],
+                    responses: {
+                        200: {
+                            description: 'Perfil obtenido correctamente.'
+                        },
+                        500: {
+                            description: 'Error al obtener perfil.'
+                        }
+                    }
+                },
+                put: {
+                    summary: 'Actualizar perfil de usuario',
+                    description: 'Actualiza los datos personales del usuario autenticado.',
+                    security: [
+                        {
+                            bearerAuth: []
+                        }
+                    ],
+                    responses: {
+                        200: {
+                            description: 'Perfil actualizado correctamente.'
+                        },
+                        500: {
+                            description: 'Error al actualizar perfil.'
+                        }
+                    }
+                }
+            },
+            '/api/admin/usuarios': {
+                get: {
+                    summary: 'Listar usuarios para administrador',
+                    description: 'Obtiene la lista de usuarios registrados. Solo disponible para usuarios administradores.',
+                    security: [
+                        {
+                            bearerAuth: []
+                        }
+                    ],
+                    responses: {
+                        200: {
+                            description: 'Lista de usuarios obtenida correctamente.'
+                        },
+                        403: {
+                            description: 'Acceso denegado.'
+                        },
+                        500: {
+                            description: 'Error al obtener usuarios.'
+                        }
+                    }
+                }
+            }
+        },
+        components: {
+            securitySchemes: {
+                bearerAuth: {
+                    type: 'http',
+                    scheme: 'bearer',
+                    bearerFormat: 'JWT'
+                }
+            }
+        }
+    },
+    apis: ['./index.js']
+};
+
+const swaggerSpec = swaggerJsdoc(swaggerOptions);
+
 // Middlewares
 app.use(cors());
 app.use(express.json());
+
+// Ruta de documentación Swagger
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+// Ruta principal de estado de la API
 app.get('/', (req, res) => {
     res.json({
         mensaje: 'API de ConectaLocal funcionando correctamente',
         estado: 'online',
+        documentacion: '/api-docs',
         rutas: {
             pruebaBaseDatos: '/test-db',
             productos: '/api/productos',
@@ -785,5 +1191,3 @@ if (require.main === module) {
         console.log(`Servidor de ConectaLocal corriendo en el puerto ${PORT}`);
     });
 }
-
-// Pipeline test 2
