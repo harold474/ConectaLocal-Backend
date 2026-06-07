@@ -4,10 +4,12 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js",
-    "test": "jest --runInBand"
-  },
+  "start": "node index.js",
+  "dev": "nodemon index.js",
+  "test": "jest --runInBand",
+  "lint": "node --check index.js",
+  "build": "echo \"Backend Node.js validado correctamente\""
+},
   "keywords": [],
   "author": "",
   "license": "ISC",

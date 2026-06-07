@@ -50,6 +50,12 @@ jobs:
       - name: Instalar dependencias
         run: npm install
 
+      - name: Build del proyecto
+        run: npm run build
+
+      - name: Lint del codigo
+        run: npm run lint
+
       - name: Instalar cliente PostgreSQL
         run: |
           sudo apt-get update
