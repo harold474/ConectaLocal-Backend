@@ -1,6 +1,6 @@
 .env
 node_modules/
-coverage
+coverage/
 dist/
 build/
 .DS_Store
