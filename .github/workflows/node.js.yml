@@ -1,0 +1,66 @@
+name: Node.js CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: 12345
+          POSTGRES_DB: conectalocal_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d conectalocal_db"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      NODE_ENV: test
+      DB_USER: postgres
+      DB_PASSWORD: 12345
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_NAME: conectalocal_db
+      PORT: 3000
+      JWT_SECRET: mi_clave_secreta_para_conectalocal_2026
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Verificar conexión con PostgreSQL
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          pg_isready -h localhost -p 5432 -U postgres
+
+      - name: Importar base de datos si existe backup SQL
+        run: |
+          if [ -f "conectalocal_db_backup.sql" ]; then
+            echo "Importando conectalocal_db_backup.sql..."
+            PGPASSWORD=12345 psql -h localhost -U postgres -d conectalocal_db -f conectalocal_db_backup.sql
+          else
+            echo "No existe conectalocal_db_backup.sql, se omite importación."
+          fi
+
+      - name: Ejecutar tests con coverage
+        run: npm test -- --coverage

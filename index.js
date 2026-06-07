@@ -713,15 +713,4 @@ if (require.main === module) {
     });
 }
 
-
-module.exports = app;
-
-/* istanbul ignore next */
-if (require.main === module) {
-    const PORT = process.env.PORT || 3000;
-    app.listen(PORT, () => {
-        console.log(`Servidor de ConectaLocal corriendo en el puerto ${PORT}`);
-    });
-}
-
 // Pipeline test 2
